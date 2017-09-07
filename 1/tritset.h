@@ -30,8 +30,9 @@ public:
 	void trim(size_t);
 	size_t length() const;
 	size_t cardinality(Trit) const;
-	std::unordered_map< Trit, int, std::hash<int> > cardinality();
+	std::unordered_map<Trit, int, std::hash<int> > cardinality();
 private:
+	TritSet() = delete;
 	void _resize(size_t);
 	void _set_trit(size_t, Trit);
 	Trit _get_trit(size_t) const;

@@ -1,4 +1,3 @@
-#include <iostream>
 #include "tritset.h"
 
 TritSet operator&(TritSet const& a, TritSet const& b) {
