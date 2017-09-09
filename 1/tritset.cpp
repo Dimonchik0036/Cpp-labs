@@ -2,32 +2,32 @@
 
 TritSet operator&(TritSet const& a, TritSet const& b) {
 	size_t len = a.capacity() > b.capacity() ? a.capacity() : b.capacity();
-	TritSet tritSet(len);
+	TritSet set(len);
 	for (size_t i = 0; i < len; ++i) {
-		tritSet[i] = a[i] & b[i];
+		set[i] = a[i] & b[i];
 	}
 
-	return tritSet;
+	return set;
 }
 
 TritSet operator|(TritSet const& a, TritSet const& b) {
 	size_t len = a.capacity() > b.capacity() ? a.capacity() : b.capacity();
-	TritSet tritSet(len);
+	TritSet set(len);
 	for (size_t i = 0; i < len; ++i) {
-		tritSet[i] = a[i] | b[i];
+		set[i] = a[i] | b[i];
 	}
 
-	return tritSet;
+	return set;
 }
 
-TritSet operator!(TritSet const& a) {
+TritSet operator~(TritSet const& a) {
 	size_t len = a.capacity();
-	TritSet tritSet(len);
+	TritSet set(len);
 	for (size_t i = 0; i < len; ++i) {
-		tritSet[i] = (Trit)!a[i];
+		set[i] = (Trit)!a[i];
 	}
 
-	return tritSet;
+	return set;
 }
 
 bool operator==(TritSet const& a, TritSet const& b) {
@@ -47,11 +47,18 @@ bool operator!=(TritSet const& a, TritSet const& b) {
 	return !(a == b);
 }
 
-TritSet::TritSet(size_t length) : _logicalLength(0), _maxLength(length) {
+TritSet::TritSet(size_t length, Trit value) : _logicalLength(value == Unknown ? 0 : length), _maxLength(length) {
+	_correction(value);
 	_allocLength = _dataLength = length / (4 * sizeof(uint)) + 1;
 	_data = new uint[_allocLength];
+
+	uint mask = 0;
+	for (size_t j = 0; j < 4 * sizeof(uint); ++j) {
+		mask |= value << (j * 2);
+	}
+
 	for (uint *i = _data; i != (_data + _allocLength + 1); ++i) {
-		*i = 0;
+		*i = mask;
 	}
 }
 
@@ -60,26 +67,15 @@ size_t TritSet::capacity() const {
 }
 
 void TritSet::_set_trit(size_t index, Trit value) {
-	switch (value) {
-		case True:
-			value = True;
-			break;
-		case False:
-			value = False;
-			break;
-		default:
-			value = Unknown;
-			break;
-	}
-
+	_correction(value);
 	size_t dataIndex = index / (4 * sizeof(uint));
-	if (_dataLength <= dataIndex) {
+	if (_maxLength <= index) {
 		if (value == Unknown) {
 			return;
 		}
 
 		_resize(dataIndex + 1);
-		_maxLength = (dataIndex + 1) * 4 * sizeof(uint);
+		_maxLength = (index + 1);
 	}
 
 	size_t dataPos = index % (4 * sizeof(uint));
@@ -95,13 +91,11 @@ void TritSet::_set_trit(size_t index, Trit value) {
 }
 
 Trit TritSet::_get_trit(size_t index) const {
-	size_t dataIndex = index / (4 * sizeof(uint));
-	if (_dataLength <= dataIndex) {
+	if (_maxLength <= index) {
 		return Unknown;
 	}
 
-	size_t dataPos = index % (4 * sizeof(uint));
-	return Trit((_data[dataIndex] >> dataPos * 2) & 0x3);
+	return Trit((_data[index / (4 * sizeof(uint))] >> index % (4 * sizeof(uint)) * 2) & 0x3);
 }
 
 Trit TritSet::operator[](size_t index) const {
@@ -113,13 +107,13 @@ void TritSet::shrink() {
 		return;
 	}
 
-	size_t lastIndex = _search_last_index();
+	size_t lastIndex = _search_last_index() + 1;
 	if (lastIndex < (_allocLength - 1) * 4 * sizeof(uint)) {
 		return;
 	}
 
 	_resize(lastIndex / (4 * sizeof(uint)) + 1);
-	_maxLength = lastIndex + 1;
+	_maxLength = (lastIndex + 1);
 }
 
 size_t TritSet::length() const {
@@ -127,17 +121,17 @@ size_t TritSet::length() const {
 }
 
 void TritSet::trim(size_t lastIndex) {
-	size_t dataIndex = lastIndex / (4 * sizeof(uint));
+	size_t dataIndex = (lastIndex) / (4 * sizeof(uint));
 	_resize(dataIndex + 1);
 	_maxLength = lastIndex;
 	_allocLength = dataIndex + 1;
-	_data[dataIndex] &= ~((uint)0) >> (6 * sizeof(uint) - 2 * (lastIndex % (4 * sizeof(uint))));
-	_logicalLength = _search_last_index();
+	_data[dataIndex] &= ~((uint)0) >> (6 * sizeof(uint) - 2 * ((lastIndex) % (4 * sizeof(uint)) - 1));
+	_logicalLength = _search_last_index() + 1;
 }
 
-size_t TritSet::_search_last_index() const {
-	size_t lastIndex = 0;
-	for (size_t i = lastIndex; i < _maxLength; ++i) {
+long long int TritSet::_search_last_index() const {
+	long long int lastIndex = -1;
+	for (size_t i = 0; i < _maxLength; ++i) {
 		if (_get_trit(i) != Unknown) {
 			lastIndex = i;
 		}
@@ -173,8 +167,8 @@ size_t TritSet::cardinality(Trit value) const {
 	return count;
 }
 
-std::unordered_map<Trit, int, std::hash<int> > TritSet::cardinality() {
-	std::unordered_map<Trit, int, std::hash<int>> unorderedMap;
+std::unordered_map<Trit, size_t, std::hash<size_t> > TritSet::cardinality() const {
+	std::unordered_map<Trit, size_t, std::hash<size_t> > unorderedMap;
 	int trueCount = 0;
 	int falseCount = 0;
 	int unknownCount = 0;
@@ -220,6 +214,20 @@ TritSet::TritSet(TritSet const& set) {
 	memcpy(this->_data, set._data, set._dataLength * sizeof(uint));
 }
 
+void TritSet::_correction(Trit& trit) {
+	switch (trit) {
+		case True:
+			trit = True;
+			break;
+		case False:
+			trit = False;
+			break;
+		default:
+			trit = Unknown;
+			break;
+	}
+}
+
 TritSet::Proxy::operator Trit() const {
 	return _set._get_trit(_pos);
 }
@@ -228,11 +236,9 @@ TritSet::Proxy TritSet::operator[](size_t index) {
 	return Proxy(*this, index);
 }
 
-TritSet::TritSet(): _maxLength(0), _dataLength(0), _logicalLength(0), _allocLength(0), _data(0) {}
-
-TritSet::Proxy& TritSet::Proxy::operator=(Trit t) {
+TritSet& TritSet::Proxy::operator=(Trit t) {
 	_set._set_trit(_pos, t);
-	return *this;
+	return this->_set;
 }
 
 TritSet::Proxy::Proxy(TritSet& set, size_t pos) : _set(set), _pos(pos) {}
