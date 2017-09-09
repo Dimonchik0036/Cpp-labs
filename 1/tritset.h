@@ -3,11 +3,14 @@
 #include <unordered_map>
 #include "trit.h"
 
+typedef uint8_t uint;
+
 class TritSet {
 public:
 	class Proxy {
 	public:
 		Proxy& operator=(Trit);
+		Trit operator[](size_t) const;
 		operator Trit() const;
 	private:
 		size_t _pos;
@@ -19,6 +22,7 @@ public:
 		friend class TritSet;
 	};
 
+	TritSet();
 	TritSet(size_t);
 	TritSet(TritSet const&);
 	TritSet& operator=(TritSet const&);
@@ -32,7 +36,6 @@ public:
 	size_t cardinality(Trit) const;
 	std::unordered_map<Trit, int, std::hash<int> > cardinality();
 private:
-	TritSet() = delete;
 	void _resize(size_t);
 	void _set_trit(size_t, Trit);
 	Trit _get_trit(size_t) const;
@@ -41,7 +44,7 @@ private:
 	size_t _allocLength;
 	size_t _dataLength;
 	size_t _logicalLength;
-	uint8_t *_data;
+	uint *_data;
 };
 
 TritSet operator&(TritSet const& a, TritSet const& b);

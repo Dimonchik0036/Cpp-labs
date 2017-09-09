@@ -48,9 +48,9 @@ bool operator!=(TritSet const& a, TritSet const& b) {
 }
 
 TritSet::TritSet(size_t length) : _logicalLength(0), _maxLength(length) {
-	_allocLength = _dataLength = length / (4 * sizeof(uint8_t)) + 1;
-	_data = new uint8_t[_allocLength];
-	for (uint8_t *i = _data; i != (_data + _allocLength + 1); ++i) {
+	_allocLength = _dataLength = length / (4 * sizeof(uint)) + 1;
+	_data = new uint[_allocLength];
+	for (uint *i = _data; i != (_data + _allocLength + 1); ++i) {
 		*i = 0;
 	}
 }
@@ -72,21 +72,21 @@ void TritSet::_set_trit(size_t index, Trit value) {
 			break;
 	}
 
-	size_t dataIndex = index / (4 * sizeof(uint8_t));
+	size_t dataIndex = index / (4 * sizeof(uint));
 	if (_dataLength <= dataIndex) {
 		if (value == Unknown) {
 			return;
 		}
 
 		_resize(dataIndex + 1);
-		_maxLength = (dataIndex + 1) * 4 * sizeof(uint8_t);
+		_maxLength = (dataIndex + 1) * 4 * sizeof(uint);
 	}
 
-	size_t dataPos = index % (4 * sizeof(uint8_t));
-	_data[dataIndex] = ~((uint8_t)(3 << dataPos * 2)) & _data[dataIndex] | ((uint8_t)value << dataPos * 2);
+	size_t dataPos = index % (4 * sizeof(uint));
+	_data[dataIndex] = ~((uint)(3 << dataPos * 2)) & _data[dataIndex] | ((uint)value << dataPos * 2);
 
 	if (index + 1 == _logicalLength && value == Unknown) {
-		_logicalLength = _search_last_index();
+		_logicalLength = _search_last_index() + 1;
 	} else {
 		if (value != Unknown && index + 1 > _logicalLength) {
 			_logicalLength = index + 1;
@@ -95,12 +95,12 @@ void TritSet::_set_trit(size_t index, Trit value) {
 }
 
 Trit TritSet::_get_trit(size_t index) const {
-	size_t dataIndex = index / (4 * sizeof(uint8_t));
+	size_t dataIndex = index / (4 * sizeof(uint));
 	if (_dataLength <= dataIndex) {
 		return Unknown;
 	}
 
-	size_t dataPos = index % (4 * sizeof(uint8_t));
+	size_t dataPos = index % (4 * sizeof(uint));
 	return Trit((_data[dataIndex] >> dataPos * 2) & 0x3);
 }
 
@@ -114,11 +114,11 @@ void TritSet::shrink() {
 	}
 
 	size_t lastIndex = _search_last_index();
-	if (lastIndex < (_allocLength - 1) * 4 * sizeof(uint8_t)) {
+	if (lastIndex < (_allocLength - 1) * 4 * sizeof(uint)) {
 		return;
 	}
 
-	_resize(lastIndex / (4 * sizeof(uint8_t)) + 1);
+	_resize(lastIndex / (4 * sizeof(uint)) + 1);
 	_maxLength = lastIndex + 1;
 }
 
@@ -127,11 +127,11 @@ size_t TritSet::length() const {
 }
 
 void TritSet::trim(size_t lastIndex) {
-	size_t dataIndex = lastIndex / (4 * sizeof(uint8_t));
+	size_t dataIndex = lastIndex / (4 * sizeof(uint));
 	_resize(dataIndex + 1);
 	_maxLength = lastIndex;
 	_allocLength = dataIndex + 1;
-	_data[dataIndex] &= ~((uint8_t)0) >> (6 * sizeof(uint8_t) - 2 * (lastIndex % (4 * sizeof(uint8_t))));
+	_data[dataIndex] &= ~((uint)0) >> (6 * sizeof(uint) - 2 * (lastIndex % (4 * sizeof(uint))));
 	_logicalLength = _search_last_index();
 }
 
@@ -142,6 +142,7 @@ size_t TritSet::_search_last_index() const {
 			lastIndex = i;
 		}
 	}
+
 	return lastIndex;
 }
 
@@ -150,12 +151,12 @@ TritSet::~TritSet() {
 }
 
 void TritSet::_resize(size_t newSize) {
-	uint8_t *tmp = new uint8_t[newSize];
-	for (uint8_t *i = tmp; i != (tmp + newSize + 1); ++i) {
+	uint *tmp = new uint[newSize];
+	for (uint *i = tmp; i != (tmp + newSize + 1); ++i) {
 		*i = 0;
 	}
 
-	memmove(tmp, _data, (newSize >= _dataLength ? _dataLength : newSize) * sizeof(uint8_t));
+	memmove(tmp, _data, (newSize > _dataLength ? _dataLength : newSize) * sizeof(uint));
 	_dataLength = newSize;
 	delete[]_data;
 	_data = tmp;
@@ -204,8 +205,8 @@ TritSet& TritSet::operator=(TritSet const& set) {
 	this->_logicalLength = set._logicalLength;
 	this->_maxLength = set._maxLength;
 	this->_dataLength = set._dataLength;
-	this->_data = new uint8_t[set._dataLength];
-	memcpy(this->_data, set._data, set._dataLength * sizeof(uint8_t));
+	this->_data = new uint[set._dataLength];
+	memcpy(this->_data, set._data, set._dataLength * sizeof(uint));
 
 	return *this;
 }
@@ -215,8 +216,8 @@ TritSet::TritSet(TritSet const& set) {
 	this->_logicalLength = set._logicalLength;
 	this->_maxLength = set._maxLength;
 	this->_dataLength = set._dataLength;
-	this->_data = new uint8_t[set._dataLength];
-	memcpy(this->_data, set._data, set._dataLength * sizeof(uint8_t));
+	this->_data = new uint[set._dataLength];
+	memcpy(this->_data, set._data, set._dataLength * sizeof(uint));
 }
 
 TritSet::Proxy::operator Trit() const {
@@ -227,9 +228,15 @@ TritSet::Proxy TritSet::operator[](size_t index) {
 	return Proxy(*this, index);
 }
 
+TritSet::TritSet(): _maxLength(0), _dataLength(0), _logicalLength(0), _allocLength(0), _data(0) {}
+
 TritSet::Proxy& TritSet::Proxy::operator=(Trit t) {
 	_set._set_trit(_pos, t);
 	return *this;
 }
 
 TritSet::Proxy::Proxy(TritSet& set, size_t pos) : _set(set), _pos(pos) {}
+
+Trit TritSet::Proxy::operator[](size_t index) const {
+	return this->_set._get_trit(index);
+}
