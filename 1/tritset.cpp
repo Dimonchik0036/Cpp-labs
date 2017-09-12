@@ -1,4 +1,5 @@
 #include "tritset.h"
+#include <mem.h>
 
 TritSet operator&(TritSet const& a, TritSet const& b) {
 	size_t len = a.capacity() > b.capacity() ? a.capacity() : b.capacity();
@@ -146,11 +147,13 @@ TritSet::~TritSet() {
 
 void TritSet::_resize(size_t newSize) {
 	uint *tmp = new uint[newSize];
-	for (uint *i = tmp; i != (tmp + newSize + 1); ++i) {
-		*i = 0;
+	if (newSize > _dataLength) {
+		memmove(tmp, _data, _dataLength * sizeof(uint));
+		memset(&tmp[_dataLength], 0, newSize - _dataLength);
+	} else {
+		memmove(tmp, _data, newSize * sizeof(uint));
 	}
 
-	memmove(tmp, _data, (newSize > _dataLength ? _dataLength : newSize) * sizeof(uint));
 	_dataLength = newSize;
 	delete[]_data;
 	_data = tmp;
@@ -169,9 +172,9 @@ size_t TritSet::cardinality(Trit value) const {
 
 std::unordered_map<Trit, size_t, std::hash<size_t> > TritSet::cardinality() const {
 	std::unordered_map<Trit, size_t, std::hash<size_t> > unorderedMap;
-	int trueCount = 0;
-	int falseCount = 0;
-	int unknownCount = 0;
+	size_t trueCount = 0;
+	size_t falseCount = 0;
+	size_t unknownCount = 0;
 
 	for (size_t i = 0; i < length(); ++i) {
 		switch (_get_trit(i)) {
@@ -194,6 +197,10 @@ std::unordered_map<Trit, size_t, std::hash<size_t> > TritSet::cardinality() cons
 }
 
 TritSet& TritSet::operator=(TritSet const& set) {
+	if (this == &set) {
+		return *this;
+	}
+
 	this->~TritSet();
 	this->_allocLength = set._allocLength;
 	this->_logicalLength = set._logicalLength;
