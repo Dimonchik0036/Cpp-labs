@@ -35,8 +35,9 @@ public:
 	Date(unsigned year, unsigned month, unsigned day, unsigned hours, unsigned minutes, unsigned seconds);
 	Date(unsigned year, Month m, unsigned day);
 	Date(unsigned hours, unsigned minutes, unsigned seconds);
-	Date(tm const&);
+	Date(tm* time_);
 	Date(Date const&);
+	~Date();
 	Date& operator=(Date const&);
 	Date add_years(int) const;
 	Date add_months(int) const;
@@ -48,10 +49,8 @@ public:
 	DateInterval get_interval(Date) const;
 	Date add_interval (const DateInterval&) const;
 private:
-	tm _time;
-	bool _bissextile(unsigned) const;
-	int _get_days_count(Month, bool = false) const;
-	void _correction(tm&);
+	tm* _time_st_;
+	__time64_t _time_;
 };
 
 class DateInterval {
