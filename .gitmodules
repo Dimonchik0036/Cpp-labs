@@ -1,0 +1,9 @@
+[submodule "HashTable/gtest"]
+	path = HashTable/gtest
+	url = https://github.com/google/googletest.git
+[submodule "HashTable/tests/gtest"]
+	path = HashTable/tests/gtest
+	url = https://github.com/google/googletest.git
+[submodule "HashTable/src/spooky-c"]
+	path = HashTable/src/spooky-c
+	url = https://github.com/andikleen/spooky-c.git
