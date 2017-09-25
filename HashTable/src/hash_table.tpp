@@ -1,5 +1,5 @@
 #include <stdexcept>
-#include <cstring>
+#include <cmath>
 #include "hash_table.h"
 
 template< typename Key >
@@ -9,14 +9,17 @@ uint32_t hash_generator(Key const& key_) {
 }
 
 template< typename Key, typename Value >
-void HashTable<Key, Value>::resize() {
+void HashTable<Key, Value>::rehash(uint32_t new_buckets_count_) {
     uint32_t old_table_size_ = _table_size_;
-    _table_size_ *= 2;
+    _table_size_ = new_buckets_count_;
     _max_size_ = (uint32_t)(_table_size_ * _threshold_);
     LinkedHashEntry<Key, Value> **old_table_ = _table_;
 
     _table_ = new LinkedHashEntry<Key, Value> *[_table_size_];
-    memset(_table_, 0, _table_size_ * sizeof(LinkedHashEntry<Key, Value> *));
+    for (auto i_ = 0; i_ < _table_size_; ++i_) {
+        _table_[i_] = nullptr;
+    }
+
     _size_ = 0;
 
     for (auto hash_ = 0; hash_ < old_table_size_; ++hash_) {
@@ -38,12 +41,14 @@ void HashTable<Key, Value>::resize() {
 template< typename Key, typename Value >
 HashTable<Key, Value>::HashTable(uint32_t (*hash_func)(Key const&), uint32_t size_, double threshold_)
         : _threshold_(threshold_),
-          _max_size_(static_cast<uint32_t>(size_ * threshold_)),
+          _max_size_(static_cast<uint32_t>(std::ceil(size_ * threshold_))),
           _table_size_(size_),
           _size_(0),
           _hash_func(hash_func) {
     _table_ = new LinkedHashEntry<Key, Value> *[_table_size_];
-    memset(_table_, 0, _table_size_ * sizeof(LinkedHashEntry<Key, Value> *));
+    for (auto i_ = 0; i_ < _table_size_; ++i_) {
+        _table_[i_] = nullptr;
+    }
 }
 
 template< typename Key, typename Value >
@@ -116,7 +121,7 @@ template< typename Key, typename Value >
 bool HashTable<Key, Value>::insert(Key const& key_, Value const& value_) {
     uint32_t hash_ = _hash_func(key_) % _table_size_;
     LinkedHashEntry<Key, Value> *entry_ = _get_entry(key_, hash_);
-    if (!entry_) {
+    if (entry_ == nullptr) {
         _table_[hash_] = new LinkedHashEntry<Key, Value>(key_, value_);
         ++_size_;
         return true;
@@ -131,7 +136,7 @@ bool HashTable<Key, Value>::insert(Key const& key_, Value const& value_) {
     ++_size_;
 
     if (_size_ >= _max_size_) {
-        resize();
+        rehash(2 * _max_size_);
     }
 
     return true;
@@ -179,7 +184,7 @@ HashTable<Key, Value>::~HashTable<Key, Value>() {
 }
 
 template< typename Key, typename Value >
-size_t HashTable<Key, Value>::size() const {
+uint32_t HashTable<Key, Value>::size() const {
     return _size_;
 }
 
@@ -214,6 +219,8 @@ void HashTable<Key, Value>::clear() {
                 entry_ = entry_->get_next();
                 delete prev_entry_;
             }
+
+            _table_[hash_] = nullptr;
         }
     }
 
@@ -326,12 +333,18 @@ bool HashTable<Key, Value>::operator==(HashTable<Key, Value> const& rhs_) const 
         }
 
         LinkedHashEntry<Key, Value> *entry_ = _table_[hash_];
+
         do {
-            if (!rhs_.contains(entry_->get_key())) {
+            try {
+                if (rhs_.at(entry_->get_key()) != entry_->get_value()) {
+                    return false;
+                }
+            } catch (std::invalid_argument) {
                 return false;
             }
 
         } while ((entry_ = entry_->get_next()));
+
     }
 
     return true;
@@ -341,4 +354,24 @@ bool HashTable<Key, Value>::operator==(HashTable<Key, Value> const& rhs_) const 
 template< typename Key, typename Value >
 bool HashTable<Key, Value>::operator!=(HashTable<Key, Value> const& rhs_) const {
     return !(*this == rhs_);
+}
+
+template< typename Key, typename Value >
+double HashTable<Key, Value>::load_factor() const {
+    return static_cast<double >(size()) / max_size();
+}
+
+template< typename Key, typename Value >
+double HashTable<Key, Value>::max_load_factor() const {
+    return _threshold_;
+}
+
+template< typename Key, typename Value >
+void HashTable<Key, Value>::reserve(uint32_t count_) {
+    rehash(static_cast<uint32_t >(std::ceil(static_cast<double >(count_) / max_load_factor())));
+}
+
+template< typename Key, typename Value >
+uint32_t HashTable<Key, Value>::max_size() const {
+    return _max_size_;
 }
