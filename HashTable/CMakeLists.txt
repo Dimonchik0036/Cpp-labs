@@ -20,7 +20,6 @@ set_target_properties(hashtablelib PROPERTIES
 # project itself
 #
 add_executable(hashtable
-        src/hash_table.h
         src/main.cpp)
 
 add_dependencies(hashtable hashtablelib)
@@ -37,8 +36,7 @@ target_link_libraries(hashtable hashtablelib)
 #
 add_executable(hashtable_unittests
         tests/main.cpp
-        tests/hashtable_unittest.cpp
-        src/hash_table.h)
+        tests/hashtable_unittest.cpp)
 
 set_target_properties(hashtable_unittests PROPERTIES
         CXX_STANDARD 11
