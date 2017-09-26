@@ -195,12 +195,11 @@ bool HashTable<Key, Value>::empty() const {
 
 template< typename Key, typename Value >
 bool HashTable<Key, Value>::contains(const Key& key_) const {
-    try {
-        at(key_);
-        return true;
-    } catch (std::invalid_argument) {
-        return false;
-    }
+    uint32_t hash_ = _hash_func(key_) % _table_size_;
+    LinkedHashEntry<Key, Value> *entry_ = _get_entry(key_, hash_);
+
+    return entry_ && entry_->get_key() == key_;
+
 }
 
 template< typename Key, typename Value >
@@ -335,11 +334,8 @@ bool HashTable<Key, Value>::operator==(HashTable<Key, Value> const& rhs_) const 
         LinkedHashEntry<Key, Value> *entry_ = _table_[hash_];
 
         do {
-            try {
-                if (rhs_.at(entry_->get_key()) != entry_->get_value()) {
-                    return false;
-                }
-            } catch (std::invalid_argument) {
+            LinkedHashEntry<Key, Value> *curr_entry_ = rhs_._get_entry(entry_->get_key(), hash_);
+            if (!curr_entry_ || curr_entry_->get_value() != entry_->get_value()) {
                 return false;
             }
 
