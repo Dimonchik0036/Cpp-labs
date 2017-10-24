@@ -1,8 +1,16 @@
 #include "tuple.h"
-
+#include "csv_parser.h"
+#include <string>
 
 int main() {
-    auto t = std::make_tuple(1, "foo", std::make_tuple(511, 24179, "fdfdf"));
-    std::cout << t;
+    try {
+        CsvParser<int, int, std::string, double > f("input.txt");
+        for (auto item : f) {
+            std::cout << item << std::endl;
+        }
+    } catch (std::exception const& exception) {
+        std::cerr << exception.what() << std::endl;
+    }
+
     return 0;
 }
